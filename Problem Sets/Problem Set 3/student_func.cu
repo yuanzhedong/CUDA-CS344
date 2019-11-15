@@ -97,6 +97,23 @@ void histogram_kernel(unsigned int* d_bins, const float* d_in, const int bin_cou
     atomicAdd(&d_bins[bin], 1);
 }
 
+__global__ void Kogge-Stone_scan_kernel(float* X, float* Y, int InputSize) {
+    __shared__ float XY[SECTION_SIZE]
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < InputSize) {
+       XY[threadIdx.x] = X[i];
+    }
+
+    for (unsigned int stride = 1; stride < blockDim.x; stride *=2) {
+      _syncthreads();
+      if (threadIdx.x >= stride) XY[threadIdx.x] += XY[threadIdx.x-stride];
+    }
+
+    Y[i] = XY[threadIdx.x];
+}
+
+/* similar with above implementation */
 __global__ 
 void scan_kernel(unsigned int* d_bins, int size) {
     int mid = threadIdx.x + blockDim.x * blockIdx.x;
